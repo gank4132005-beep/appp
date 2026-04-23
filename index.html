@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ふたりの足跡アプリ</title>
+    <style>
+        body {
+            display: flex; flex-direction: column; align-items: center;
+            background-color: #fff5f5; font-family: sans-serif; margin: 0; padding: 0;
+        }
+        #button-area {
+            position: sticky; top: 0; background: rgba(255, 245, 245, 0.95);
+            padding: 20px; z-index: 10; text-align: center; width: 100%;
+            border-bottom: 1px solid #ffebeb;
+        }
+        #car-button {
+            font-size: 80px; background: none; border: none; cursor: pointer;
+            transition: transform 0.1s; -webkit-tap-highlight-color: transparent;
+        }
+        #car-button:active { transform: scale(0.8); }
+        
+        #trophy-list {
+            display: flex; flex-direction: column-reverse;
+            align-items: center; gap: 12px; padding: 20px; width: 100%;
+            max-width: 400px;
+        }
+        .entry {
+            display: flex; align-items: center; gap: 15px;
+            background: white; padding: 10px 20px; border-radius: 50px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); width: 80%;
+            animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .trophy { font-size: 30px; }
+        .date { font-size: 14px; color: #888; font-weight: bold; flex-grow: 1; text-align: right; }
+        @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div id="button-area">
+        <button id="car-button">🚗</button>
+        <div style="font-size: 14px; color: #ff4d4d; margin-top: 5px; font-weight: bold;">タップして完了！</div>
+    </div>
+
+    <div id="trophy-list"></div>
+
+    <audio id="success-sound" src="https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3"></audio>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // あなたの設定情報を反映しました
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZL03hgYZfxYEjf4QGznoSZADLdwHlrFY",
+            authDomain: "p-complete-app.firebaseapp.com",
+            databaseURL: "https://p-complete-app-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "p-complete-app",
+            storageBucket: "p-complete-app.firebasestorage.app",
+            messagingSenderId: "1005753846832",
+            appId: "1:1005753846832:web:34c1ea32b7a1990ccf31f5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dbRef = ref(db, "trophies");
+
+        const carButton = document.getElementById('car-button');
+        const trophyList = document.getElementById('trophy-list');
+        const sound = document.getElementById('success-sound');
+
+        function getRandomColor() {
+            const types = ['single', 'grad', 'rainbow'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            if (type === 'rainbow') return 'linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet)';
+            if (type === 'grad') return `linear-gradient(45deg, hsl(${Math.random()*360},70%,60%), hsl(${Math.random()*360},70%,60%))`;
+            return `hsl(${Math.random() * 360}, 80%, 50%)`;
+        }
+
+        carButton.addEventListener('click', () => {
+            const now = new Date();
+            const dateString = `${now.getMonth() + 1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            // データを送信
+            push(dbRef, {
+                date: dateString,
+                color: getRandomColor()
+            });
+
+            sound.currentTime = 0;
+            sound.play();
+        });
+
+        // 相手が押したときもリアルタイムで表示
+        onChildAdded(dbRef, (data) => {
+            const v = data.val();
+            addEntry(v.date, v.color);
+        });
+
+        function addEntry(dateText, color) {
+            const div = document.createElement('div');
+            div.className = 'entry';
+            const trophy = document.createElement('span');
+            trophy.className = 'trophy';
+            trophy.innerText = '🏆';
+            
+            if (color.includes('gradient')) {
+                trophy.style.background = color;
+                trophy.style.webkitBackgroundClip = 'text';
+                trophy.style.webkitTextFillColor = 'transparent';
+            } else {
+                trophy.style.color = color;
+            }
+
+            const dateLabel = document.createElement('span');
+            dateLabel.className = 'date';
+            dateLabel.innerText = dateText;
+
+            div.appendChild(trophy);
+            div.appendChild(dateLabel);
+            trophyList.appendChild(div);
+        }
+    </script>
+</body>
+</html>
